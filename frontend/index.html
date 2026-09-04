@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Remote Lab Access Portal</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/xterm/6.0.0/xterm.css"
+    >
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            font-family: Arial, sans-serif;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h1 {
+            margin-bottom: 25px;
+            font-size: 30px;
+        }
+
+        .terminal-window {
+            width: 900px;
+            max-width: 90%;
+            height: 540px;
+
+            background: #11111b;
+            border: 1px solid #45475a;
+            border-radius: 12px;
+
+            overflow: hidden;
+
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .terminal-header {
+            height: 42px;
+            background: #313244;
+
+            display: flex;
+            align-items: center;
+
+            padding: 0 16px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #f38ba8;
+        }
+
+        .yellow {
+            background: #f9e2af;
+        }
+
+        .green {
+            background: #a6e3a1;
+        }
+
+        .terminal-title {
+            margin-left: 25px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        #terminal {
+            height: calc(100% - 42px);
+            padding: 15px;
+            background: #11111b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Remote Lab Access Portal</h1>
+
+    <div class="terminal-window">
+
+        <div class="terminal-header">
+
+            <div class="buttons">
+                <div class="button red"></div>
+                <div class="button yellow"></div>
+                <div class="button green"></div>
+            </div>
+
+            <div class="terminal-title">
+                student@lab-gateway:~
+            </div>
+
+        </div>
+
+        <div id="terminal"></div>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/6.0.0/xterm.js"></script>
+
+    <script>
+        const term = new Terminal({
+            cursorBlink: true,
+            fontSize: 15,
+            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+
+            theme: {
+                background: "#11111b",
+                foreground: "#cdd6f4",
+                cursor: "#f5e0dc"
+            }
+        });
+
+        term.open(document.getElementById("terminal"));
+        term.focus();
+
+        term.writeln("Welcome to the Lab Portal Gateway v1.0");
+        term.writeln("Connecting to backend...");
+
+        const protocol =
+            window.location.protocol === "https:"
+                ? "wss:"
+                : "ws:";
+
+        const socket = new WebSocket(
+            protocol + "//" +
+            window.location.host +
+            "/ws/terminal"
+        );
+
+        socket.onopen = function () {
+            term.writeln("WebSocket connected.");
+            term.writeln("");
+            term.focus();
+        };
+
+        socket.onmessage = function (event) {
+            term.write(event.data);
+        };
+
+        term.onData(function (data) {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(data);
+            }
+        });
+
+        socket.onclose = function () {
+            term.writeln("");
+            term.writeln("Connection closed.");
+        };
+
+        socket.onerror = function (error) {
+            console.error("WebSocket error:", error);
+            term.writeln("");
+            term.writeln("WebSocket connection error.");
+        };
+
+        document
+            .getElementById("terminal")
+            .addEventListener("click", function () {
+                term.focus();
+            });
+    </script>
+
+</body>
+</html>
