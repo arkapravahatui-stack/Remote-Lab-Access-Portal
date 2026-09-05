@@ -96,11 +96,3 @@ For deployment, configure the backend with the authorized lab machine's:
 - SSH key
 
 Never commit private SSH keys, passwords, tokens, or `.env` files to this repository.
-
-## Current Architecture Status
-
-Step 1: Complete
-
-Step 2: Complete
-
-Next: Step 3 - Authentication, Session Management and Idle Timeout
