@@ -1,4 +1,5 @@
 backend/venv/
+backend/users.db
 __pycache__/
 *.pyc
 .DS_Store

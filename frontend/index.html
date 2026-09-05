@@ -34,6 +34,80 @@
             font-size: 30px;
         }
 
+        .login-card {
+            width: 380px;
+            max-width: 90%;
+
+            background: #11111b;
+            border: 1px solid #45475a;
+            border-radius: 12px;
+
+            padding: 28px;
+
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .login-card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 11px 12px;
+
+            border: 1px solid #45475a;
+            border-radius: 6px;
+
+            background: #181825;
+            color: #cdd6f4;
+
+            font-size: 15px;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #89b4fa;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 11px;
+
+            border: none;
+            border-radius: 6px;
+
+            background: #89b4fa;
+            color: #11111b;
+
+            font-size: 15px;
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .login-button:hover {
+            opacity: 0.9;
+        }
+
+        #login-message {
+            margin-top: 14px;
+            text-align: center;
+            min-height: 20px;
+            font-size: 14px;
+        }
+
         .terminal-window {
             width: 900px;
             max-width: 90%;
@@ -46,6 +120,8 @@
             overflow: hidden;
 
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+            display: none;
         }
 
         .terminal-header {
@@ -99,7 +175,40 @@
 
     <h1>Remote Lab Access Portal</h1>
 
-    <div class="terminal-window">
+    <div class="login-card" id="login-card">
+
+        <h2>Student Login</h2>
+
+        <div class="input-group">
+            <label for="username">Username</label>
+            <input
+                type="text"
+                id="username"
+                placeholder="Enter username"
+                autocomplete="username"
+            >
+        </div>
+
+        <div class="input-group">
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                placeholder="Enter password"
+                autocomplete="current-password"
+            >
+        </div>
+
+        <button class="login-button" id="login-button">
+            Login
+        </button>
+
+        <div id="login-message"></div>
+
+    </div>
+
+
+    <div class="terminal-window" id="terminal-window">
 
         <div class="terminal-header">
 
@@ -119,70 +228,224 @@
 
     </div>
 
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/6.0.0/xterm.js"></script>
 
     <script>
-        const term = new Terminal({
-            cursorBlink: true,
-            fontSize: 15,
-            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        let term = null;
+        let socket = null;
 
-            theme: {
-                background: "#11111b",
-                foreground: "#cdd6f4",
-                cursor: "#f5e0dc"
+
+        async function login() {
+
+            const username =
+                document.getElementById("username").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+            const message =
+                document.getElementById("login-message");
+
+
+            if (!username || !password) {
+                message.textContent =
+                    "Please enter username and password.";
+                return;
             }
-        });
 
-        term.open(document.getElementById("terminal"));
-        term.focus();
 
-        term.writeln("Welcome to the Lab Portal Gateway v1.0");
-        term.writeln("Connecting to backend...");
+            message.textContent = "Logging in...";
 
-        const protocol =
-            window.location.protocol === "https:"
-                ? "wss:"
-                : "ws:";
 
-        const socket = new WebSocket(
-            protocol + "//" +
-            window.location.host +
-            "/ws/terminal"
-        );
+            try {
 
-        socket.onopen = function () {
-            term.writeln("WebSocket connected.");
-            term.writeln("");
+                const response = await fetch("/login", {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+
+                if (!response.ok) {
+
+                    message.textContent =
+                        "Invalid username or password.";
+
+                    return;
+                }
+
+
+                const data = await response.json();
+
+                const token = data.access_token;
+
+
+                message.textContent =
+                    "Login successful.";
+
+
+                startTerminal(token);
+
+
+            } catch (error) {
+
+                console.error("Login error:", error);
+
+                message.textContent =
+                    "Unable to connect to login server.";
+            }
+        }
+
+
+        function startTerminal(token) {
+
+            document.getElementById("login-card").style.display =
+                "none";
+
+            document.getElementById("terminal-window").style.display =
+                "block";
+
+
+            term = new Terminal({
+                cursorBlink: true,
+                fontSize: 15,
+                fontFamily:
+                    'Menlo, Monaco, "Courier New", monospace',
+
+                theme: {
+                    background: "#11111b",
+                    foreground: "#cdd6f4",
+                    cursor: "#f5e0dc"
+                }
+            });
+
+
+            term.open(
+                document.getElementById("terminal")
+            );
+
+
             term.focus();
-        };
 
-        socket.onmessage = function (event) {
-            term.write(event.data);
-        };
 
-        term.onData(function (data) {
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(data);
-            }
-        });
+            term.writeln(
+                "Welcome to the Lab Portal Gateway v1.0"
+            );
 
-        socket.onclose = function () {
-            term.writeln("");
-            term.writeln("Connection closed.");
-        };
+            term.writeln(
+                "Authenticating terminal session..."
+            );
 
-        socket.onerror = function (error) {
-            console.error("WebSocket error:", error);
-            term.writeln("");
-            term.writeln("WebSocket connection error.");
-        };
+
+            const protocol =
+                window.location.protocol === "https:"
+                    ? "wss:"
+                    : "ws:";
+
+
+            socket = new WebSocket(
+                protocol +
+                "//" +
+                window.location.host +
+                "/ws/terminal?token=" +
+                encodeURIComponent(token)
+            );
+
+
+            socket.onopen = function () {
+
+                term.writeln(
+                    "WebSocket connected."
+                );
+
+                term.writeln("");
+
+                term.focus();
+            };
+
+
+            socket.onmessage = function (event) {
+
+                term.write(event.data);
+            };
+
+
+            term.onData(function (data) {
+
+                if (
+                    socket.readyState ===
+                    WebSocket.OPEN
+                ) {
+                    socket.send(data);
+                }
+
+            });
+
+
+            socket.onclose = function () {
+
+                term.writeln("");
+
+                term.writeln(
+                    "Connection closed."
+                );
+            };
+
+
+            socket.onerror = function (error) {
+
+                console.error(
+                    "WebSocket error:",
+                    error
+                );
+
+                term.writeln("");
+
+                term.writeln(
+                    "WebSocket connection error."
+                );
+            };
+
+
+            document
+                .getElementById("terminal")
+                .addEventListener(
+                    "click",
+                    function () {
+                        term.focus();
+                    }
+                );
+        }
+
 
         document
-            .getElementById("terminal")
-            .addEventListener("click", function () {
-                term.focus();
-            });
+            .getElementById("login-button")
+            .addEventListener(
+                "click",
+                login
+            );
+
+
+        document
+            .getElementById("password")
+            .addEventListener(
+                "keydown",
+                function (event) {
+
+                    if (event.key === "Enter") {
+                        login();
+                    }
+
+                }
+            );
     </script>
 
 </body>
