@@ -258,20 +258,17 @@
             message.textContent = "Logging in...";
 
 
-            try {
-
-                const response = await fetch("http://localhost:8000/login", {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
-                });
+            try {const response = await fetch("/login", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        username: username,
+        password: password
+    })
+});
+                               
 
 
                 if (!response.ok) {
@@ -345,12 +342,10 @@
             );
 
 
-            socket = new WebSocket(
-                "ws://localhost:8000/ws/terminal?token=" +
-                encodeURIComponent(token)
-            );
-
-
+           socket = new WebSocket(
+    `ws://${window.location.hostname}:8000/ws/terminal?token=` +
+    encodeURIComponent(token)
+);
             socket.onopen = function () {
 
                 term.writeln(
